@@ -4,17 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HCH Store | Direct to Chime</title>
-    <script src="https://js.stripe.com/v3/"></script>
     <style>
-        :root { --primary: #111827; --accent: #3B82F6; --success: #10B981; --bg: #F3F4F6; --card-bg: #FFFFFF; }
+        :root { --primary: #111827; --accent: #3B82F6; --success: #10B981; --bg: #F3F4F6; --card-bg: #FFFFFF; --warning: #F59E0B; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background-color: var(--bg); color: #1F2937; }
         
         header { background: var(--card-bg); padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
         .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
         .logo span { color: var(--accent); }
-        .cart-icon { position: relative; cursor: pointer; padding: 0.5rem; }
+        .header-actions { display: flex; gap: 1rem; align-items: center; }
+        .cart-icon { position: relative; cursor: pointer; padding: 0.5rem; font-size: 1.5rem; }
         .cart-count { position: absolute; top: -5px; right: -5px; background: var(--accent); color: white; font-size: 0.75rem; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .dashboard-btn { background: var(--success); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .dashboard-btn:hover { background: #059669; }
         
         .hero { text-align: center; padding: 4rem 1rem; background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%); color: white; }
         .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; }
@@ -37,13 +39,17 @@
         .btn-accent { background: var(--accent); }
         .btn-accent:hover { background: #2563EB; }
         
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; overflow-y: auto; }
         .modal-overlay.active { display: flex; }
-        .modal { background: white; width: 90%; max-width: 550px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 25px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+        .modal { background: white; width: 90%; max-width: 600px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 25px rgba(0,0,0,0.1); margin: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .cart-items { margin-bottom: 1.5rem; border-top: 1px solid #E5E7EB; padding-top: 1rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; }
+        .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+        .cart-items { margin-bottom: 1.5rem; border-top: 1px solid #E5E7EB; padding-top: 1rem; max-height: 200px; overflow-y: auto; }
         .cart-item { display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem; }
-        .cart-total { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem; border-top: 2px solid var(--primary); padding-top: 1rem; margin-top: 1rem; margin-bottom: 1.5rem; }
+        .cart-summary { background: #F9FAFB; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-weight: 500; }
+        .summary-total { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem; border-top: 2px solid #E5E7EB; padding-top: 1rem; }
         
         .form-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #E5E7EB; }
         .form-section h4 { margin-bottom: 1rem; font-weight: 600; }
@@ -53,14 +59,36 @@
         .form-group label { font-size: 0.85rem; font-weight: 500; margin-bottom: 0.35rem; color: #374151; }
         .form-group input { padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.95rem; }
         .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        .form-note { font-size: 0.8rem; color: #6B7280; margin-top: 0.25rem; }
         
-        #card-element { padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; margin-bottom: 1rem; }
         #payment-status { padding: 1rem; border-radius: 8px; margin-top: 1rem; text-align: center; display: none; }
         .status-success { background: #D1FAE5; color: #065F46; }
-        .status-error { background: #FEF3C7; color: #92400E; }
-        .status-warning { background: #FECACA; color: #7F1D1D; }
+        .status-error { background: #FEE2E2; color: #DC2626; }
+        .status-warning { background: #FEF3C7; color: #92400E; }
 
-        .form-note { font-size: 0.8rem; color: #6B7280; margin-top: 0.25rem; }
+        .dashboard-modal { max-width: 700px; }
+        .profit-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+        .profit-card { background: linear-gradient(135deg, var(--success) 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 10px; text-align: center; }
+        .profit-card.warning { background: linear-gradient(135deg, var(--warning) 0%, #D97706 100%); }
+        .profit-card.accent { background: linear-gradient(135deg, var(--accent) 0%, #1D4ED8 100%); }
+        .profit-number { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .profit-label { font-size: 0.9rem; opacity: 0.9; }
+
+        .tribe-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E5E7EB; }
+        .tribe-section h4 { margin-bottom: 1rem; font-weight: 600; color: var(--primary); }
+        .tribe-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; max-height: 200px; overflow-y: auto; }
+        .tribe-member { background: #F9FAFB; padding: 0.75rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .tribe-member-name { font-weight: 500; }
+        .tribe-member-share { font-weight: 600; color: var(--success); }
+        .add-tribe-form { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .add-tribe-form input { flex: 1; padding: 0.5rem; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.9rem; }
+        .add-tribe-btn { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .add-tribe-btn:hover { background: #2563EB; }
+
+        .transaction-history { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E5E7EB; }
+        .transaction-history h4 { margin-bottom: 1rem; font-weight: 600; color: var(--primary); }
+        .transaction { background: #F9FAFB; padding: 1rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.9rem; }
+        .transaction-amount { font-weight: 700; color: var(--success); }
 
         footer { background: var(--primary); color: white; text-align: center; padding: 2rem; margin-top: 4rem; }
     </style>
@@ -69,14 +97,17 @@
 
 <header>
     <div class="logo">HCH<span>Store</span></div>
-    <div class="cart-icon" onclick="openCheckout()">
-        🛒 <span class="cart-count" id="cartCount">0</span>
+    <div class="header-actions">
+        <button class="dashboard-btn" onclick="openDashboard()">💰 Dashboard</button>
+        <div class="cart-icon" onclick="openCheckout()">
+            🛒 <span class="cart-count" id="cartCount">0</span>
+        </div>
     </div>
 </header>
 
 <section class="hero">
     <h1>Premium Bonds. Sharp Styles.</h1>
-    <p>Direct Deposit to Chime. Minimal Security.</p>
+    <p>Direct Deposit to Chime. Bank Transfers Only.</p>
 </section>
 
 <div class="container">
@@ -88,22 +119,35 @@
     <div class="product-grid" id="jackets-grid"></div>
 </div>
 
+<!-- CHECKOUT MODAL -->
 <div class="modal-overlay" id="checkoutModal">
     <div class="modal">
         <div class="modal-header">
             <h3 class="modal-title">Checkout</h3>
-            <button class="close-modal" onclick="closeCheckout()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">×</button>
+            <button class="close-btn" onclick="closeCheckout()">×</button>
         </div>
+        
         <div class="cart-items" id="cartItems"></div>
-        <div class="cart-total">
-            <span>Total</span>
-            <span id="cartTotal">$0.00</span>
+        
+        <div class="cart-summary">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span id="subtotal">$0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Your Profit (100%):</span>
+                <span id="yourProfit" style="color: var(--success); font-weight: 700;">$0.00</span>
+            </div>
+            <div class="summary-total">
+                <span>Total:</span>
+                <span id="cartTotal">$0.00</span>
+            </div>
         </div>
         
         <form id="payment-form">
-            <!-- ACCOUNT INFO -->
+            <!-- BUYER INFO -->
             <div class="form-section">
-                <h4>Account Holder Information</h4>
+                <h4>Buyer Information</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="firstName">First Name</label>
@@ -122,15 +166,9 @@
                 </div>
             </div>
 
-            <!-- CARD PAYMENT -->
-            <div class="form-section">
-                <h4>Card Details</h4>
-                <div id="card-element"></div>
-            </div>
-
             <!-- BANK ACCOUNT -->
             <div class="form-section">
-                <h4>Bank Account (Chime Direct)</h4>
+                <h4>Bank Account (ACH Transfer)</h4>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="accountNumber">Account Number</label>
@@ -139,21 +177,65 @@
                     </div>
                     <div class="form-group">
                         <label for="routingNumber">Routing Number</label>
-                        <input type="text" id="routingNumber" name="routingNumber" placeholder="••••••••" maxlength="9" pattern="[0-9]{9}" required>
+                        <input type="text" id="routingNumber" name="routingNumber" placeholder="•••••••••" maxlength="9" pattern="[0-9]{9}" required>
                         <span class="form-note">9-digit routing number</span>
                     </div>
                 </div>
             </div>
 
-            <!-- SUBMIT BUTTON -->
-            <button type="submit" id="submit-btn" class="btn btn-accent" style="margin-top: 1.5rem;">Pay with Chime Direct</button>
+            <button type="submit" id="submit-btn" class="btn btn-accent" style="margin-top: 1.5rem;">Complete Payment</button>
             <div id="payment-status"></div>
         </form>
     </div>
 </div>
 
+<!-- DASHBOARD MODAL -->
+<div class="modal-overlay" id="dashboardModal">
+    <div class="modal dashboard-modal">
+        <div class="modal-header">
+            <h3 class="modal-title">💰 Profit Dashboard</h3>
+            <button class="close-btn" onclick="closeDashboard()">×</button>
+        </div>
+
+        <div class="profit-cards">
+            <div class="profit-card">
+                <div class="profit-number" id="totalProfit">$0.00</div>
+                <div class="profit-label">Total Profits</div>
+            </div>
+            <div class="profit-card accent">
+                <div class="profit-number" id="totalSales">$0.00</div>
+                <div class="profit-label">Total Sales</div>
+            </div>
+            <div class="profit-card">
+                <div class="profit-number" id="totalTransferred">$0.00</div>
+                <div class="profit-label">Transferred to Tribe</div>
+            </div>
+            <div class="profit-card warning">
+                <div class="profit-number" id="availableProfit">$0.00</div>
+                <div class="profit-label">Available Balance</div>
+            </div>
+        </div>
+
+        <div class="tribe-section">
+            <h4>👥 Your Tribe (Affiliates)</h4>
+            <div class="add-tribe-form">
+                <input type="text" id="tribeName" placeholder="Name" style="flex: 0.5;">
+                <input type="email" id="tribeEmail" placeholder="Email" style="flex: 1;">
+                <input type="text" id="tribeShare" placeholder="%" style="flex: 0.3; max-width: 60px;">
+                <button type="button" class="add-tribe-btn" onclick="addTribeMember()">Add</button>
+            </div>
+            <div class="tribe-list" id="tribeList"></div>
+        </div>
+
+        <div class="transaction-history">
+            <h4>📊 Recent Sales</h4>
+            <div id="transactionHistory"></div>
+        </div>
+    </div>
+</div>
+
 <footer>
-    <p>&copy; 2026 HCH Store. Powered by Stripe & Chime.</p>
+    <p>&copy; 2026 HCH Store. 100% Profit to You.</p>
 </footer>
 
 <script>
@@ -170,23 +252,32 @@
     ];
 
     let cart = [];
-    let stripe;
-    let elements;
-    let cardElement;
+    let tribeMembers = [];
+    let transactions = [];
+
+    // LOAD DATA FROM LOCALSTORAGE
+    function loadData() {
+        const saved = localStorage.getItem('paydayData');
+        if (saved) {
+            const data = JSON.parse(saved);
+            tribeMembers = data.tribe || [];
+            transactions = data.transactions || [];
+            updateTribeUI();
+            updateTransactionUI();
+        }
+    }
+
+    // SAVE DATA TO LOCALSTORAGE
+    function saveData() {
+        localStorage.setItem('paydayData', JSON.stringify({
+            tribe: tribeMembers,
+            transactions: transactions
+        }));
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         renderProducts();
-        // Initialize Stripe with your PUBLIC KEY
-        stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx'); 
-        elements = stripe.elements();
-        
-        // Style the card input
-        const style = {
-            base: { fontSize: '16px', color: '#323258', '::placeholder': { color: '#aab7c4' } },
-            invalid: { color: '#fa755a' }
-        };
-        
-        cardElement = elements.create('card', { style: style, hidePostalCode: true });
+        loadData();
     });
 
     function renderProducts() {
@@ -215,15 +306,19 @@
         if (cart.length === 0) return alert("Cart is empty!");
         document.getElementById('checkoutModal').classList.add('active');
         renderCart();
-        
-        // Mount Stripe Element into the modal
-        const container = document.getElementById('card-element');
-        container.innerHTML = ''; // Clear previous
-        cardElement.mount('#card-element');
     }
 
     function closeCheckout() {
         document.getElementById('checkoutModal').classList.remove('active');
+    }
+
+    function openDashboard() {
+        document.getElementById('dashboardModal').classList.add('active');
+        updateDashboard();
+    }
+
+    function closeDashboard() {
+        document.getElementById('dashboardModal').classList.remove('active');
     }
 
     function renderCart() {
@@ -234,17 +329,16 @@
             total += item.price;
             container.innerHTML += `<div class="cart-item"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`;
         });
+        document.getElementById('subtotal').innerText = `$${total.toFixed(2)}`;
+        document.getElementById('yourProfit').innerText = `$${total.toFixed(2)}`;
         document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
     }
 
-    // VALIDATION FUNCTIONS
     function validateBankAccount(accountNumber) {
-        // Basic validation: 8-12 digits
         return /^\d{8,12}$/.test(accountNumber.replace(/\s/g, ''));
     }
 
     function validateRoutingNumber(routingNumber) {
-        // Routing number must be exactly 9 digits
         const routing = routingNumber.replace(/\s/g, '');
         return /^\d{9}$/.test(routing);
     }
@@ -259,44 +353,38 @@
         const btn = document.getElementById('submit-btn');
         const status = document.getElementById('payment-status');
         
-        // Reset status
         status.style.display = 'none';
         status.className = '';
 
-        // Validate form fields
         const firstName = document.getElementById('firstName').value.trim();
         const lastName = document.getElementById('lastName').value.trim();
         const email = document.getElementById('email').value.trim();
         const accountNumber = document.getElementById('accountNumber').value.trim();
         const routingNumber = document.getElementById('routingNumber').value.trim();
 
-        // Check required fields
         if (!firstName || !lastName || !email) {
-            status.className = 'status-message status-error';
-            status.innerText = '❌ Please fill in all account holder information.';
+            status.className = 'status-error';
+            status.innerText = '❌ Please fill in all required information.';
             status.style.display = 'block';
             return;
         }
 
-        // Validate email
         if (!validateEmail(email)) {
-            status.className = 'status-message status-error';
+            status.className = 'status-error';
             status.innerText = '❌ Please enter a valid email address.';
             status.style.display = 'block';
             return;
         }
 
-        // Validate account number
         if (!accountNumber || !validateBankAccount(accountNumber)) {
-            status.className = 'status-message status-error';
+            status.className = 'status-error';
             status.innerText = '❌ Account number must be 8-12 digits.';
             status.style.display = 'block';
             return;
         }
 
-        // Validate routing number
         if (!routingNumber || !validateRoutingNumber(routingNumber)) {
-            status.className = 'status-message status-error';
+            status.className = 'status-error';
             status.innerText = '❌ Routing number must be exactly 9 digits.';
             status.style.display = 'block';
             return;
@@ -305,78 +393,148 @@
         btn.disabled = true;
         btn.innerText = "Processing...";
 
-        // 1. Create a Payment Method using the Card Element
-        const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
-            type: 'card',
-            card: cardElement,
-            billing_details: {
-                name: `${firstName} ${lastName}`,
-                email: email
-            }
-        });
-
-        if (pmError) {
-            status.className = 'status-message status-error';
-            status.innerText = `❌ ${pmError.message}`;
-            status.style.display = 'block';
-            btn.disabled = false;
-            btn.innerText = "Pay with Chime Direct";
-            return;
-        }
-
-        // 2. Simulate backend verification of bank details
-        setTimeout(async () => {
+        // SIMULATE PAYMENT PROCESSING
+        setTimeout(() => {
             try {
-                status.className = 'status-message status-warning';
-                status.innerText = '⏳ Verifying bank account and routing number...';
-                status.style.display = 'block';
-
-                // Simulate routing number validation
-                const isValidRouting = await verifyRoutingNumber(routingNumber);
-                if (!isValidRouting) {
-                    status.className = 'status-message status-error';
-                    status.innerText = '❌ Invalid routing number. Please check and try again.';
-                    status.style.display = 'block';
-                    btn.disabled = false;
-                    btn.innerText = "Pay with Chime Direct";
-                    return;
-                }
-
-                // Process payment
-                status.className = 'status-message status-warning';
-                status.innerText = '⏳ Processing Chime Direct payment...';
+                status.className = 'status-warning';
+                status.innerText = '⏳ Processing ACH transfer...';
                 status.style.display = 'block';
 
                 setTimeout(() => {
-                    status.className = 'status-message status-success';
-                    status.innerText = `✅ Payment Successful! Funds transferred to account ending in ${accountNumber.slice(-4)}. Check your Chime app.`;
+                    // Calculate totals
+                    let cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+                    
+                    // Record transaction
+                    const transaction = {
+                        id: Date.now(),
+                        buyer: `${firstName} ${lastName}`,
+                        email: email,
+                        amount: cartTotal,
+                        profit: cartTotal,
+                        account: accountNumber.slice(-4),
+                        date: new Date().toLocaleString(),
+                        items: cart.length
+                    };
+                    
+                    transactions.push(transaction);
+                    saveData();
+
+                    // Calculate tribe payments
+                    let totalTribePay = 0;
+                    tribeMembers.forEach(member => {
+                        member.earned = (member.earned || 0) + (cartTotal * member.share / 100);
+                        totalTribePay += cartTotal * member.share / 100;
+                    });
+                    saveData();
+
+                    status.className = 'status-success';
+                    status.innerText = `✅ Payment Successful!\n💰 You earned $${cartTotal.toFixed(2)}\n🏦 Transferred to account ending in ${accountNumber.slice(-4)}`;
                     status.style.display = 'block';
-                    btn.innerText = "Pay with Chime Direct";
+                    btn.innerText = "Complete Payment";
                     btn.disabled = false;
                     
-                    // Clear cart after 2.5 seconds
                     setTimeout(() => {
                         cart = [];
                         document.getElementById('cartCount').innerText = 0;
                         closeCheckout();
-                        // Reset form
                         document.getElementById('payment-form').reset();
                     }, 2500);
                 }, 1500);
             } catch (error) {
-                status.className = 'status-message status-error';
-                status.innerText = `❌ Payment processing error: ${error.message}`;
+                status.className = 'status-error';
+                status.innerText = `❌ Error: ${error.message}`;
                 status.style.display = 'block';
                 btn.disabled = false;
-                btn.innerText = "Pay with Chime Direct";
+                btn.innerText = "Complete Payment";
             }
         }, 1000);
     });
 
-    // SIMULATE ROUTING NUMBER VERIFICATION
-    async function verifyRoutingNumber(routingNumber) {
-        return /^\d{9}$/.test(routingNumber);
+    // TRIBE MANAGEMENT
+    function addTribeMember() {
+        const name = document.getElementById('tribeName').value.trim();
+        const email = document.getElementById('tribeEmail').value.trim();
+        const share = parseFloat(document.getElementById('tribeShare').value) || 0;
+
+        if (!name || !email || share <= 0 || share > 100) {
+            alert('Please fill in valid information. Share must be 1-100%');
+            return;
+        }
+
+        const totalShare = tribeMembers.reduce((sum, m) => sum + m.share, 0) + share;
+        if (totalShare > 100) {
+            alert(`Total shares cannot exceed 100%. Current: ${totalShare}%`);
+            return;
+        }
+
+        tribeMembers.push({ name, email, share, earned: 0 });
+        saveData();
+        updateTribeUI();
+        
+        document.getElementById('tribeName').value = '';
+        document.getElementById('tribeEmail').value = '';
+        document.getElementById('tribeShare').value = '';
+    }
+
+    function removeTribeMember(index) {
+        tribeMembers.splice(index, 1);
+        saveData();
+        updateTribeUI();
+    }
+
+    function updateTribeUI() {
+        const list = document.getElementById('tribeList');
+        if (tribeMembers.length === 0) {
+            list.innerHTML = '<p style="text-align: center; color: #9CA3AF;">No tribe members yet</p>';
+            return;
+        }
+        
+        list.innerHTML = tribeMembers.map((member, idx) => `
+            <div class="tribe-member">
+                <div>
+                    <div class="tribe-member-name">${member.name}</div>
+                    <div style="font-size: 0.85rem; color: #6B7280;">${member.email} • ${member.share}%</div>
+                    <div style="font-size: 0.85rem; color: var(--success);">Earned: $${(member.earned || 0).toFixed(2)}</div>
+                </div>
+                <button type="button" onclick="removeTribeMember(${idx})" style="background: #FEE2E2; color: #DC2626; border: none; padding: 0.25rem 0.75rem; border-radius: 5px; cursor: pointer; font-size: 0.8rem;">Remove</button>
+            </div>
+        `).join('');
+    }
+
+    function updateTransactionUI() {
+        const history = document.getElementById('transactionHistory');
+        if (transactions.length === 0) {
+            history.innerHTML = '<p style="text-align: center; color: #9CA3AF;">No sales yet</p>';
+            return;
+        }
+        
+        history.innerHTML = transactions.slice().reverse().slice(0, 10).map(t => `
+            <div class="transaction">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <strong>${t.buyer}</strong>
+                    <span class="transaction-amount">+$${t.amount.toFixed(2)}</span>
+                </div>
+                <div style="font-size: 0.85rem; color: #6B7280;">
+                    ${t.items} item(s) • Account: ****${t.account} • ${t.date}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function updateDashboard() {
+        const totalSales = transactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalTransferred = tribeMembers.reduce((sum, m) => sum + (m.earned || 0), 0);
+        const yourProfit = totalSales - totalTransferred;
+
+        document.getElementById('totalProfit').innerText = `$${totalSales.toFixed(2)}`;
+        document.getElementById('totalSales').innerText = `$${totalSales.toFixed(2)}`;
+        document.getElementById('totalTransferred').innerText = `$${totalTransferred.toFixed(2)}`;
+        document.getElementById('availableProfit').innerText = `$${yourProfit.toFixed(2)}`;
+
+        updateTribeUI();
+        updateTransactionUI();
     }
 </script>
+
 </body>
 </html>
