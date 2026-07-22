@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCH Store | Direct to Chime</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        :root { --primary: #111827; --accent: #3B82F6; --success: #10B981; --bg: #F3F4F6; --card-bg: #FFFFFF; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: var(--bg); color: #1F2937; }
+        
+        header { background: var(--card-bg); padding: 1rem 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+        .logo span { color: var(--accent); }
+        .cart-icon { position: relative; cursor: pointer; padding: 0.5rem; }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: var(--accent); color: white; font-size: 0.75rem; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        .hero { text-align: center; padding: 4rem 1rem; background: linear-gradient(135deg, var(--primary) 0%, #1e293b 100%); color: white; }
+        .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+        
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .section-title { font-size: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); display: inline-block; }
+        
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 3rem; }
+        .product-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s; display: flex; flex-direction: column; }
+        .product-card:hover { transform: translateY(-5px); }
+        .product-image { height: 200px; background: #E5E7EB; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+        .product-image.bond { background: #E0E7FF; color: #4F46E5; }
+        .product-image.shirt { background: #FCE7F3; color: #DB2777; }
+        .product-image.jacket { background: #D1FAE5; color: #059669; }
+        .product-info { padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .product-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 0.5rem; }
+        .product-price { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem; }
+        .btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; }
+        .btn:hover { background: #374151; }
+        .btn-accent { background: var(--accent); }
+        .btn-accent:hover { background: #2563EB; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; }
+        .modal { background: white; width: 90%; max-width: 550px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 25px rgba(0,0,0,0.1); max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .cart-items { margin-bottom: 1.5rem; border-top: 1px solid #E5E7EB; padding-top: 1rem; }
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.9rem; }
+        .cart-total { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem; border-top: 2px solid var(--primary); padding-top: 1rem; margin-top: 1rem; margin-bottom: 1.5rem; }
+        
+        .form-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #E5E7EB; }
+        .form-section h4 { margin-bottom: 1rem; font-weight: 600; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .form-row.full { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; font-weight: 500; margin-bottom: 0.35rem; color: #374151; }
+        .form-group input { padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 0.95rem; }
+        .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        #card-element { padding: 0.75rem; border: 1px solid #D1D5DB; border-radius: 6px; margin-bottom: 1rem; }
+        #payment-status { padding: 1rem; border-radius: 8px; margin-top: 1rem; text-align: center; display: none; }
+        .status-success { background: #D1FAE5; color: #065F46; }
+        .status-error { background: #FEF3C7; color: #92400E; }
+        .status-warning { background: #FECACA; color: #7F1D1D; }
+
+        .form-note { font-size: 0.8rem; color: #6B7280; margin-top: 0.25rem; }
+
+        footer { background: var(--primary); color: white; text-align: center; padding: 2rem; margin-top: 4rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">HCH<span>Store</span></div>
+    <div class="cart-icon" onclick="openCheckout()">
+        🛒 <span class="cart-count" id="cartCount">0</span>
+    </div>
+</header>
+
+<section class="hero">
+    <h1>Premium Bonds. Sharp Styles.</h1>
+    <p>Direct Deposit to Chime. Minimal Security.</p>
+</section>
+
+<div class="container">
+    <h2 class="section-title">Investment Bonds</h2>
+    <div class="product-grid" id="bonds-grid"></div>
+    <h2 class="section-title">Premium Shirts</h2>
+    <div class="product-grid" id="shirts-grid"></div>
+    <h2 class="section-title">Designer Jackets</h2>
+    <div class="product-grid" id="jackets-grid"></div>
+</div>
+
+<div class="modal-overlay" id="checkoutModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Checkout</h3>
+            <button class="close-modal" onclick="closeCheckout()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">×</button>
+        </div>
+        <div class="cart-items" id="cartItems"></div>
+        <div class="cart-total">
+            <span>Total</span>
+            <span id="cartTotal">$0.00</span>
+        </div>
+        
+        <form id="payment-form">
+            <!-- ACCOUNT INFO -->
+            <div class="form-section">
+                <h4>Account Holder Information</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <input type="text" id="firstName" name="firstName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <input type="text" id="lastName" name="lastName" required>
+                    </div>
+                </div>
+                <div class="form-row full">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD PAYMENT -->
+            <div class="form-section">
+                <h4>Card Details</h4>
+                <div id="card-element"></div>
+            </div>
+
+            <!-- BANK ACCOUNT -->
+            <div class="form-section">
+                <h4>Bank Account (Chime Direct)</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="accountNumber">Account Number</label>
+                        <input type="password" id="accountNumber" name="accountNumber" placeholder="••••••••" maxlength="12" required>
+                        <span class="form-note">Last 8 digits of your account</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="routingNumber">Routing Number</label>
+                        <input type="text" id="routingNumber" name="routingNumber" placeholder="••••••••" maxlength="9" pattern="[0-9]{9}" required>
+                        <span class="form-note">9-digit routing number</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBMIT BUTTON -->
+            <button type="submit" id="submit-btn" class="btn btn-accent" style="margin-top: 1.5rem;">Pay with Chime Direct</button>
+            <div id="payment-status"></div>
+        </form>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 HCH Store. Powered by Stripe & Chime.</p>
+</footer>
+
+<script>
+    const products = [
+        { id: 1, name: "Gov Treasury Bond", type: "bond", price: 1050.00 },
+        { id: 2, name: "Tech Corp Bond", type: "bond", price: 1200.00 },
+        { id: 3, name: "Green Energy Bond", type: "bond", price: 980.00 },
+        { id: 4, name: "Oxford Shirt", type: "shirt", price: 45.00 },
+        { id: 5, name: "Silk Dress Shirt", type: "shirt", price: 65.00 },
+        { id: 6, name: "Denim Shirt", type: "shirt", price: 50.00 },
+        { id: 7, name: "Leather Jacket", type: "jacket", price: 199.00 },
+        { id: 8, name: "Wool Overcoat", type: "jacket", price: 250.00 },
+        { id: 9, name: "Denim Trucker", type: "jacket", price: 120.00 }
+    ];
+
+    let cart = [];
+    let stripe;
+    let elements;
+    let cardElement;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        renderProducts();
+        // Initialize Stripe with your PUBLIC KEY
+        stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx'); 
+        elements = stripe.elements();
+        
+        // Style the card input
+        const style = {
+            base: { fontSize: '16px', color: '#323258', '::placeholder': { color: '#aab7c4' } },
+            invalid: { color: '#fa755a' }
+        };
+        
+        cardElement = elements.create('card', { style: style, hidePostalCode: true });
+    });
+
+    function renderProducts() {
+        const grids = { bond: document.getElementById('bonds-grid'), shirt: document.getElementById('shirts-grid'), jacket: document.getElementById('jackets-grid') };
+        products.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <div class="product-image ${p.type}">${p.type === 'bond' ? '📈' : p.type === 'shirt' ? '👕' : '🧥'}</div>
+                <div class="product-info">
+                    <div class="product-title">${p.name}</div>
+                    <div class="product-price">$${p.price.toFixed(2)}</div>
+                    <button class="btn" type="button" onclick="addToCart(${p.id})">Add to Cart</button>
+                </div>`;
+            grids[p.type].appendChild(card);
+        });
+    }
+
+    function addToCart(id) {
+        const product = products.find(p => p.id === id);
+        cart.push(product);
+        document.getElementById('cartCount').innerText = cart.length;
+    }
+
+    function openCheckout() {
+        if (cart.length === 0) return alert("Cart is empty!");
+        document.getElementById('checkoutModal').classList.add('active');
+        renderCart();
+        
+        // Mount Stripe Element into the modal
+        const container = document.getElementById('card-element');
+        container.innerHTML = ''; // Clear previous
+        cardElement.mount('#card-element');
+    }
+
+    function closeCheckout() {
+        document.getElementById('checkoutModal').classList.remove('active');
+    }
+
+    function renderCart() {
+        const container = document.getElementById('cartItems');
+        container.innerHTML = '';
+        let total = 0;
+        cart.forEach(item => {
+            total += item.price;
+            container.innerHTML += `<div class="cart-item"><span>${item.name}</span><span>$${item.price.toFixed(2)}</span></div>`;
+        });
+        document.getElementById('cartTotal').innerText = `$${total.toFixed(2)}`;
+    }
+
+    // VALIDATION FUNCTIONS
+    function validateBankAccount(accountNumber) {
+        // Basic validation: 8-12 digits
+        return /^\d{8,12}$/.test(accountNumber.replace(/\s/g, ''));
+    }
+
+    function validateRoutingNumber(routingNumber) {
+        // Routing number must be exactly 9 digits
+        const routing = routingNumber.replace(/\s/g, '');
+        return /^\d{9}$/.test(routing);
+    }
+
+    function validateEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // FORM SUBMISSION
+    document.getElementById('payment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-btn');
+        const status = document.getElementById('payment-status');
+        
+        // Reset status
+        status.style.display = 'none';
+        status.className = '';
+
+        // Validate form fields
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const accountNumber = document.getElementById('accountNumber').value.trim();
+        const routingNumber = document.getElementById('routingNumber').value.trim();
+
+        // Check required fields
+        if (!firstName || !lastName || !email) {
+            status.className = 'status-message status-error';
+            status.innerText = '❌ Please fill in all account holder information.';
+            status.style.display = 'block';
+            return;
+        }
+
+        // Validate email
+        if (!validateEmail(email)) {
+            status.className = 'status-message status-error';
+            status.innerText = '❌ Please enter a valid email address.';
+            status.style.display = 'block';
+            return;
+        }
+
+        // Validate account number
+        if (!accountNumber || !validateBankAccount(accountNumber)) {
+            status.className = 'status-message status-error';
+            status.innerText = '❌ Account number must be 8-12 digits.';
+            status.style.display = 'block';
+            return;
+        }
+
+        // Validate routing number
+        if (!routingNumber || !validateRoutingNumber(routingNumber)) {
+            status.className = 'status-message status-error';
+            status.innerText = '❌ Routing number must be exactly 9 digits.';
+            status.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        // 1. Create a Payment Method using the Card Element
+        const { paymentMethod, error: pmError } = await stripe.createPaymentMethod({
+            type: 'card',
+            card: cardElement,
+            billing_details: {
+                name: `${firstName} ${lastName}`,
+                email: email
+            }
+        });
+
+        if (pmError) {
+            status.className = 'status-message status-error';
+            status.innerText = `❌ ${pmError.message}`;
+            status.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "Pay with Chime Direct";
+            return;
+        }
+
+        // 2. Simulate backend verification of bank details
+        setTimeout(async () => {
+            try {
+                status.className = 'status-message status-warning';
+                status.innerText = '⏳ Verifying bank account and routing number...';
+                status.style.display = 'block';
+
+                // Simulate routing number validation
+                const isValidRouting = await verifyRoutingNumber(routingNumber);
+                if (!isValidRouting) {
+                    status.className = 'status-message status-error';
+                    status.innerText = '❌ Invalid routing number. Please check and try again.';
+                    status.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerText = "Pay with Chime Direct";
+                    return;
+                }
+
+                // Process payment
+                status.className = 'status-message status-warning';
+                status.innerText = '⏳ Processing Chime Direct payment...';
+                status.style.display = 'block';
+
+                setTimeout(() => {
+                    status.className = 'status-message status-success';
+                    status.innerText = `✅ Payment Successful! Funds transferred to account ending in ${accountNumber.slice(-4)}. Check your Chime app.`;
+                    status.style.display = 'block';
+                    btn.innerText = "Pay with Chime Direct";
+                    btn.disabled = false;
+                    
+                    // Clear cart after 2.5 seconds
+                    setTimeout(() => {
+                        cart = [];
+                        document.getElementById('cartCount').innerText = 0;
+                        closeCheckout();
+                        // Reset form
+                        document.getElementById('payment-form').reset();
+                    }, 2500);
+                }, 1500);
+            } catch (error) {
+                status.className = 'status-message status-error';
+                status.innerText = `❌ Payment processing error: ${error.message}`;
+                status.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Pay with Chime Direct";
+            }
+        }, 1000);
+    });
+
+    // SIMULATE ROUTING NUMBER VERIFICATION
+    async function verifyRoutingNumber(routingNumber) {
+        return /^\d{9}$/.test(routingNumber);
+    }
+</script>
+</body>
+</html>
