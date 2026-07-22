@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Joke Generator</title>
+    <style>
+        :root {
+            --primary: #111827;
+            --accent: #3B82F6;
+            --success: #10B981;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text: #1F2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 3rem 2rem;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #6B7280;
+            font-size: 1rem;
+        }
+
+        .joke-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .joke-text {
+            font-size: 1.3rem;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        .joke-setup {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .joke-punchline {
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+            font-weight: 700;
+            color: #FCD34D;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563EB;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .category-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+        }
+
+        .category-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #E5E7EB;
+        }
+
+        .stat-card {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6B7280;
+            margin-top: 0.25rem;
+        }
+
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .favorites {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #E5E7EB;
+        }
+
+        .favorites-title {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .favorite-item {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            color: #374151;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remove-btn {
+            background: #FEE2E2;
+            color: #DC2626;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .remove-btn:hover {
+            background: #FCA5A5;
+        }
+
+        .no-favorites {
+            color: #9CA3AF;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .joke-display {
+                padding: 1.5rem;
+            }
+
+            .joke-text {
+                font-size: 1.1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>😂 Joke Generator</h1>
+        <p class="subtitle">Get random jokes from around the world</p>
+    </header>
+
+    <div class="error" id="errorMsg"></div>
+
+    <div class="category-select-wrapper">
+        <label for="category" style="display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--primary);">Select Category:</label>
+        <select id="category" class="category-select">
+            <option value="any">Any Category</option>
+            <option value="general">General</option>
+            <option value="programming">Programming</option>
+            <option value="knock-knock">Knock Knock</option>
+        </select>
+    </div>
+
+    <div class="joke-display" id="jokeDisplay">
+        <div class="loading">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+    </div>
+
+    <div class="button-group">
+        <button class="btn btn-primary" id="newJokeBtn" onclick="fetchJoke()">
+            <span>🎲</span> Get New Joke
+        </button>
+        <button class="btn btn-secondary" id="favoriteBtn" onclick="addToFavorites()">
+            <span>❤️</span> Add to Favorites
+        </button>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number" id="jokeCount">0</div>
+            <div class="stat-label">Jokes Loaded</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" id="favoriteCount">0</div>
+            <div class="stat-label">Favorites</div>
+        </div>
+    </div>
+
+    <div class="favorites" id="favoritesSection" style="display: none;">
+        <div class="favorites-title">⭐ Your Favorite Jokes</div>
+        <div id="favoritesList"></div>
+    </div>
+</div>
+
+<script>
+    let currentJoke = null;
+    let jokeCount = 0;
+    let favorites = [];
+    
+    const API_URL = 'https://official-joke-api.appspot.com/random_joke';
+    const CATEGORY_API = 'https://official-joke-api.appspot.com/jokes/{category}/random_joke';
+
+    // Load favorites from localStorage
+    function loadFavorites() {
+        const saved = localStorage.getItem('jokesFavorites');
+        if (saved) {
+            try {
+                favorites = JSON.parse(saved);
+                updateFavoritesUI();
+            } catch (e) {
+                console.error('Error loading favorites:', e);
+                favorites = [];
+            }
+        }
+    }
+
+    // Save favorites to localStorage
+    function saveFavorites() {
+        localStorage.setItem('jokesFavorites', JSON.stringify(favorites));
+        updateFavoritesUI();
+    }
+
+    // Update favorites UI
+    function updateFavoritesUI() {
+        const favCount = document.getElementById('favoriteCount');
+        favCount.textContent = favorites.length;
+
+        const favSection = document.getElementById('favoritesSection');
+        const favList = document.getElementById('favoritesList');
+
+        if (favorites.length === 0) {
+            favSection.style.display = 'none';
+            return;
+        }
+
+        favSection.style.display = 'block';
+        favList.innerHTML = favorites.map((joke, index) => {
+            const jokeText = joke.setup ? `${joke.setup} ${joke.punchline}` : joke.joke;
+            return `
+                <div class="favorite-item">
+                    <span>${jokeText.substring(0, 80)}${jokeText.length > 80 ? '...' : ''}</span>
+                    <button class="remove-btn" onclick="removeFavorite(${index})">Remove</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Remove favorite
+    function removeFavorite(index) {
+        favorites.splice(index, 1);
+        saveFavorites();
+    }
+
+    // Add to favorites
+    function addToFavorites() {
+        if (!currentJoke) {
+            showError('Please get a joke first!');
+            return;
+        }
+
+        // Check if already in favorites
+        const isDuplicate = favorites.some(fav => 
+            (fav.id === currentJoke.id) || 
+            (fav.joke === currentJoke.joke) ||
+            (fav.setup === currentJoke.setup && fav.punchline === currentJoke.punchline)
+        );
+
+        if (isDuplicate) {
+            showError('This joke is already in your favorites!');
+            return;
+        }
+
+        favorites.push(currentJoke);
+        saveFavorites();
+        showNotification('Added to favorites!');
+    }
+
+    // Show error message
+    function showError(message) {
+        const errorMsg = document.getElementById('errorMsg');
+        errorMsg.textContent = message;
+        errorMsg.classList.add('show');
+        setTimeout(() => {
+            errorMsg.classList.remove('show');
+        }, 4000);
+    }
+
+    // Show notification
+    function showNotification(message) {
+        const errorMsg = document.getElementById('errorMsg');
+        errorMsg.textContent = message;
+        errorMsg.style.background = '#DCFCE7';
+        errorMsg.style.color = '#166534';
+        errorMsg.classList.add('show');
+        setTimeout(() => {
+            errorMsg.classList.remove('show');
+            errorMsg.style.background = '#FEE2E2';
+            errorMsg.style.color = '#DC2626';
+        }, 3000);
+    }
+
+    // Fetch joke from API
+    async function fetchJoke() {
+        const btn = document.getElementById('newJokeBtn');
+        const favBtn = document.getElementById('favoriteBtn');
+        const jokeDisplay = document.getElementById('jokeDisplay');
+        const category = document.getElementById('category').value;
+
+        btn.disabled = true;
+        favBtn.disabled = true;
+
+        try {
+            let url = API_URL;
+            if (category !== 'any') {
+                url = CATEGORY_API.replace('{category}', category);
+            }
+
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            currentJoke = data;
+            jokeCount++;
+
+            // Display joke
+            if (data.setup && data.punchline) {
+                jokeDisplay.innerHTML = `
+                    <div>
+                        <div class="joke-setup">${data.setup}</div>
+                        <div class="joke-punchline">${data.punchline}</div>
+                    </div>
+                `;
+            } else {
+                jokeDisplay.innerHTML = `<div class="joke-text">${data.joke}</div>`;
+            }
+
+            document.getElementById('jokeCount').textContent = jokeCount;
+
+        } catch (error) {
+            console.error('Error fetching joke:', error);
+            jokeDisplay.innerHTML = `<div class="joke-text">😅 Oops! Couldn't load a joke. Try again!</div>`;
+            showError('Failed to fetch joke. Please try again.');
+        } finally {
+            btn.disabled = false;
+            favBtn.disabled = false;
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadFavorites();
+        fetchJoke();
+    });
+
+    // Fetch joke on category change
+    document.getElementById('category').addEventListener('change', fetchJoke);
+</script>
+
+</body>
+</html>
