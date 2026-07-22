@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HCH Store | Direct to Chime</title>
     <style>
-        :root { --primary: #111827; --accent: #3B82F6; --success: #10B981; --bg: #F3F4F6; --card-bg: #FFFFFF; --warning: #F59E0B; }
+        :root { --primary: #111827; --accent: #3B82F6; --success: #10B981; --bg: #F3F4F6; --card-bg: #FFFFFF; --warning: #F59E0B; --danger: #EF4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
         body { background-color: var(--bg); color: #1F2937; }
         
@@ -38,6 +38,8 @@
         .btn:hover { background: #374151; }
         .btn-accent { background: var(--accent); }
         .btn-accent:hover { background: #2563EB; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #DC2626; }
         
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; overflow-y: auto; }
         .modal-overlay.active { display: flex; }
@@ -66,13 +68,26 @@
         .status-error { background: #FEE2E2; color: #DC2626; }
         .status-warning { background: #FEF3C7; color: #92400E; }
 
-        .dashboard-modal { max-width: 700px; }
+        .dashboard-modal { max-width: 750px; }
         .profit-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
         .profit-card { background: linear-gradient(135deg, var(--success) 0%, #059669 100%); color: white; padding: 1.5rem; border-radius: 10px; text-align: center; }
         .profit-card.warning { background: linear-gradient(135deg, var(--warning) 0%, #D97706 100%); }
         .profit-card.accent { background: linear-gradient(135deg, var(--accent) 0%, #1D4ED8 100%); }
         .profit-number { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
         .profit-label { font-size: 0.9rem; opacity: 0.9; }
+
+        .withdrawal-section { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem; }
+        .withdrawal-section h4 { margin-bottom: 1rem; font-size: 1.2rem; }
+        .withdrawal-info { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        .withdrawal-info-item { background: rgba(255,255,255,0.1); padding: 0.75rem; border-radius: 6px; }
+        .withdrawal-amount { font-size: 1.5rem; font-weight: 700; }
+        .withdrawal-label { font-size: 0.85rem; opacity: 0.9; }
+        .withdrawal-form { background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; }
+        .withdrawal-form input { width: 100%; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; font-size: 0.9rem; color: white; background: rgba(255,255,255,0.1); }
+        .withdrawal-form input::placeholder { color: rgba(255,255,255,0.6); }
+        .withdrawal-form input:focus { outline: none; border-color: white; background: rgba(255,255,255,0.2); }
+        .withdraw-btn { background: var(--success); color: white; border: none; padding: 0.75rem; border-radius: 6px; width: 100%; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+        .withdraw-btn:hover { background: #059669; }
 
         .tribe-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #E5E7EB; }
         .tribe-section h4 { margin-bottom: 1rem; font-weight: 600; color: var(--primary); }
@@ -89,6 +104,9 @@
         .transaction-history h4 { margin-bottom: 1rem; font-weight: 600; color: var(--primary); }
         .transaction { background: #F9FAFB; padding: 1rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.9rem; }
         .transaction-amount { font-weight: 700; color: var(--success); }
+        .transaction-status { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-left: 0.5rem; }
+        .status-pending { background: #FEF3C7; color: #92400E; }
+        .status-completed { background: #D1FAE5; color: #065F46; }
 
         footer { background: var(--primary); color: white; text-align: center; padding: 2rem; margin-top: 4rem; }
     </style>
@@ -216,6 +234,29 @@
             </div>
         </div>
 
+        <!-- WITHDRAWAL SECTION -->
+        <div class="withdrawal-section">
+            <h4>💳 Withdraw Money</h4>
+            <div class="withdrawal-info">
+                <div class="withdrawal-info-item">
+                    <div class="withdrawal-amount" id="withdrawAmount">$0.00</div>
+                    <div class="withdrawal-label">Available to Withdraw</div>
+                </div>
+                <div class="withdrawal-info-item">
+                    <div id="withdrawalStatus" style="font-size: 1rem; font-weight: 600;">Ready</div>
+                    <div class="withdrawal-label">Status</div>
+                </div>
+            </div>
+            <div class="withdrawal-form">
+                <input type="text" id="withdrawAccount" placeholder="Your Bank Account (Last 4 digits)" maxlength="4">
+                <input type="text" id="withdrawRouting" placeholder="Routing Number" maxlength="9" pattern="[0-9]{9}">
+                <input type="email" id="withdrawEmail" placeholder="Confirmation Email">
+                <button type="button" class="withdraw-btn" onclick="processWithdrawal()">💰 Withdraw Now</button>
+            </div>
+            <div id="withdrawal-status" style="margin-top: 1rem; padding: 0.75rem; border-radius: 6px; display: none; background: rgba(255,255,255,0.2); text-align: center;"></div>
+        </div>
+
+        <!-- TRIBE SECTION -->
         <div class="tribe-section">
             <h4>👥 Your Tribe (Affiliates)</h4>
             <div class="add-tribe-form">
@@ -227,6 +268,7 @@
             <div class="tribe-list" id="tribeList"></div>
         </div>
 
+        <!-- TRANSACTION HISTORY -->
         <div class="transaction-history">
             <h4>📊 Recent Sales</h4>
             <div id="transactionHistory"></div>
@@ -254,6 +296,7 @@
     let cart = [];
     let tribeMembers = [];
     let transactions = [];
+    let withdrawals = [];
 
     // LOAD DATA FROM LOCALSTORAGE
     function loadData() {
@@ -262,6 +305,7 @@
             const data = JSON.parse(saved);
             tribeMembers = data.tribe || [];
             transactions = data.transactions || [];
+            withdrawals = data.withdrawals || [];
             updateTribeUI();
             updateTransactionUI();
         }
@@ -271,7 +315,8 @@
     function saveData() {
         localStorage.setItem('paydayData', JSON.stringify({
             tribe: tribeMembers,
-            transactions: transactions
+            transactions: transactions,
+            withdrawals: withdrawals
         }));
     }
 
@@ -413,7 +458,8 @@
                         profit: cartTotal,
                         account: accountNumber.slice(-4),
                         date: new Date().toLocaleString(),
-                        items: cart.length
+                        items: cart.length,
+                        status: 'completed'
                     };
                     
                     transactions.push(transaction);
@@ -449,6 +495,77 @@
             }
         }, 1000);
     });
+
+    // WITHDRAWAL FUNCTION
+    function processWithdrawal() {
+        const totalSales = transactions.reduce((sum, t) => sum + t.amount, 0);
+        const totalTransferred = tribeMembers.reduce((sum, m) => sum + (m.earned || 0), 0);
+        const availableProfit = totalSales - totalTransferred;
+
+        const account = document.getElementById('withdrawAccount').value.trim();
+        const routing = document.getElementById('withdrawRouting').value.trim();
+        const email = document.getElementById('withdrawEmail').value.trim();
+
+        if (availableProfit <= 0) {
+            alert('❌ No balance to withdraw!');
+            return;
+        }
+
+        if (!account || !routing || !email) {
+            alert('❌ Please fill in all withdrawal details!');
+            return;
+        }
+
+        if (!/^\d{4}$/.test(account)) {
+            alert('❌ Account must be 4 digits!');
+            return;
+        }
+
+        if (!/^\d{9}$/.test(routing)) {
+            alert('❌ Routing must be 9 digits!');
+            return;
+        }
+
+        if (!validateEmail(email)) {
+            alert('❌ Please enter valid email!');
+            return;
+        }
+
+        // Process withdrawal
+        const withdrawal = {
+            id: Date.now(),
+            amount: availableProfit,
+            account: account,
+            routing: routing,
+            email: email,
+            date: new Date().toLocaleString(),
+            status: 'completed'
+        };
+
+        withdrawals.push(withdrawal);
+        saveData();
+
+        const statusDiv = document.getElementById('withdrawal-status');
+        statusDiv.innerHTML = `✅ WITHDRAWAL SUCCESSFUL!\n\n💰 Amount: $${availableProfit.toFixed(2)}\n🏦 Account: ****${account}\n📧 Confirmation sent to: ${email}\n\nTransaction ID: ${withdrawal.id}`;
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'rgba(16, 185, 129, 0.3)';
+
+        // Clear form and reset totals
+        document.getElementById('withdrawAccount').value = '';
+        document.getElementById('withdrawRouting').value = '';
+        document.getElementById('withdrawEmail').value = '';
+
+        // Reset transaction data
+        transactions = [];
+        tribeMembers.forEach(m => m.earned = 0);
+        saveData();
+
+        // Update dashboard
+        setTimeout(() => {
+            updateDashboard();
+            statusDiv.style.display = 'none';
+        }, 4000);
+    }
 
     // TRIBE MANAGEMENT
     function addTribeMember() {
@@ -513,6 +630,7 @@
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
                     <strong>${t.buyer}</strong>
                     <span class="transaction-amount">+$${t.amount.toFixed(2)}</span>
+                    <span class="transaction-status status-completed">${t.status.toUpperCase()}</span>
                 </div>
                 <div style="font-size: 0.85rem; color: #6B7280;">
                     ${t.items} item(s) • Account: ****${t.account} • ${t.date}
@@ -530,6 +648,7 @@
         document.getElementById('totalSales').innerText = `$${totalSales.toFixed(2)}`;
         document.getElementById('totalTransferred').innerText = `$${totalTransferred.toFixed(2)}`;
         document.getElementById('availableProfit').innerText = `$${yourProfit.toFixed(2)}`;
+        document.getElementById('withdrawAmount').innerText = `$${yourProfit.toFixed(2)}`;
 
         updateTribeUI();
         updateTransactionUI();
